@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>From Ad Viewability to Click-Through Rate &mdash; Williams Zanga</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a href="../index.html" class="site-name">Williams Zanga</a>
+    <nav>
+      <a href="../blog.html">Blog</a>
+      <a href="../publications.html">Publications</a>
+      <a href="../resume.html">Resume</a>
+      <a href="https://github.com/wkzng" target="_blank">GitHub</a>
+      <a href="mailto:zanga.williams@gmail.com">Email</a>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+        <span id="theme-icon">&#9790;</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <a href="../blog.html" class="article-back">&larr; back</a>
+
+  <div class="article-header">
+    <h1>From Ad Viewability to Click-Through Rate</h1>
+    <div class="article-meta">2026-02-12</div>
+  </div>
+
+  <div class="article-body">
+
+    <p>
+      In digital advertising, a displayed ad is not necessarily <em>seen</em> by the user.
+      An ad might load below the fold, in a background tab, or be scrolled past before it renders.
+      This distinction between <strong>displayed</strong> and <strong>viewed</strong> has real
+      consequences for how we model click-through rates. This post derives a simple correction
+      factor that links the observed CTR to viewability as
+
+          $$P(\text{click} \mid \text{channel}) = Q \cdot \bigl[\, V + r \cdot (1 - V) \,\bigr]$$
+      
+
+      with Q as the insinsic ad quality, V as its viewability and r as false-click rate.
+    </p>
+
+    <h2>Setup</h2>
+
+    <p>
+      We consider three random variables and one latent event:
+    </p>
+
+    <ul>
+      <li><strong>click</strong> &mdash; the user clicks the ad</li>
+      <li><strong>display</strong> &mdash; the ad is served and rendered on the page</li>
+      <li><strong>channel</strong> &mdash; the placement or context (site, position, device, etc.)</li>
+      <li><strong>view</strong> &mdash; the ad is actually seen by the user (latent)</li>
+    </ul>
+
+    <p>
+      The quantity we often observe in logs is $P(\text{click} \mid \text{channel})$,
+      but what we really care about is the <em>true</em> click rate conditioned on the ad
+      being viewed: $P(\text{click} \mid \text{channel}, \text{view})$.
+    </p>
+
+    <h2>Derivation</h2>
+
+    <p>
+      Start from the joint probability and marginalize over the latent view event:
+    </p>
+
+    $$P(\text{click}, \text{channel}) = P(\text{click},\text{channel}, \text{view}) + P(\text{click},\text{channel}, \neg\text{view})$$
+
+    <p>
+      Applying the Bayes' rule to each term:
+    </p>
+
+    $$P(\text{click}, \text{channel}) = P(\text{click} \mid \text{channel}, \text{view})\, P(\text{channel}, \text{view}) + P(\text{click} \mid \text{channel}, \neg\text{view})\, P(\text{channel}, \neg\text{view})$$
+
+    <p>
+      Dividing both sides by $P(\text{channel})$:
+    </p>
+
+    $$P(\text{click} \mid \text{channel}) = P(\text{click} \mid \text{channel}, \text{view})\, P(\text{view} \mid  \text{channel}) + P(\text{click} \mid \text{channel}, \neg\text{view})\, P(\neg\text{view} \mid \text{channel})$$
+
+    <h2>Viewability and the false-click factor</h2>
+
+    <p>
+      We introduce two quantities to simplify the expression:
+    </p>
+
+    <p>
+      <strong>Viewability score.</strong> The probability that a displayed ad is actually viewed in a given channel:
+    </p>
+
+    $$V = P(\text{view} \mid \text{channel})$$
+
+    <p>
+      <strong>False-click factor.</strong> A scalar $r \in [0, 1]$ that captures the ratio of
+      click probability when the ad is <em>not</em> viewed versus when it is:
+    </p>
+
+    $$P(\text{click} \mid \text{channel}, \neg\text{view}) = r \cdot P(\text{click} \mid \text{channel}, \text{view})$$
+
+    <p>
+      False clicks can be attributed to multiple factors such as accidental clicks, bots.
+      When $r = 0$, users never click ads they haven't seen (the ideal case).
+      When $r > 0$, there is some residual click rate from accidental clicks, bot traffic,
+      or misattributed events. In practise we can expect $r$ to be negligible overall.
+    </p>
+
+    <p>
+      Substituting into the boxed equation and writing
+    </p>
+      $$Q = P(\text{click} \mid \text{channel}, \text{view})$$
+
+    <p>
+      leading to
+    </p>
+
+    $$\boxed{P(\text{click} \mid \text{channel}) = Q \cdot \bigl[\, V + r \cdot (1 - V) \,\bigr]}$$
+
+    <p>
+      The term in brackets is a <strong>viewability correction factor</strong>. It tells us how much
+      of the true CTR is preserved in the observed CTR, as a function of viewability $V$ and
+      false-click rate $r$.
+    </p>
+
+    <h2>Interpretation</h2>
+
+    <ul>
+      <li>
+        When $V = 1$ (every displayed ad is viewed), the correction factor equals $1$ regardless
+        of $r$, and the observed CTR matches the true CTR.
+      </li>
+      <li>
+        When $V = 0$ (no ad is viewed), the correction factor equals $r$ &mdash; the observed
+        CTR is purely from false clicks.
+      </li>
+      <li>
+        For intermediate values, the correction factor interpolates linearly between $r$ and $1$.
+      </li>
+    </ul>
+
+    <h2>Visualisation</h2>
+
+    <p>
+      The plot below shows the correction factor $V + r\,(1 - V)$ as a function of viewability $V$,
+      for several values of the false-click factor $r$.
+    </p>
+
+    <figure>
+      <img src="../assets/ad-viewability/correction_factor.png" alt="Viewability correction factor for various values of r">
+      <figcaption>Correction factor $V + r(1 - V)$ vs. viewability $V$ for $r \in \{0, 0.05, 0.1, 0.2, 0.5\}$.</figcaption>
+    </figure>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <span class="footer-text">&copy; 2026 Williams Zanga</span>
+  </div>
+</footer>
+
+<script src="../js/main.js"></script>
+</body>
+</html>
