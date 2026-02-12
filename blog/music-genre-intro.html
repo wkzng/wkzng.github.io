@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>How CNNs hear music — Your Name</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <a href="../index.html" class="nav-logo">YN.dev</a>
+  <div class="nav-links">
+    <a href="../index.html">home</a>
+    <a href="../research.html">research</a>
+    <a href="../projects.html">projects</a>
+    <a href="../blog.html" class="active">blog</a>
+    <a href="../contact.html" class="nav-cta">contact</a>
+  </div>
+  <button class="nav-hamburger" onclick="toggleMenu()" aria-label="Menu">☰</button>
+</nav>
+
+<main>
+  <div class="article-wrap">
+    <a href="../blog.html" class="back-link">← Back to blog</a>
+
+    <div class="article-header">
+      <span class="card-tag music">Music ML</span>
+      <h1>How CNNs hear music: a tour of Mel-spectrograms</h1>
+      <div class="article-meta">
+        <span>Feb 8, 2026</span>
+        <span>8 min read</span>
+        <span>Audio · Deep Learning · CNN</span>
+      </div>
+    </div>
+
+    <div class="article-body">
+
+      <p>
+        Music genre classification sounds simple: listen to a song, decide if it's jazz or metal.
+        For a human, this is instantaneous — a mix of rhythm, timbre, and cultural context clicks
+        into place almost before the first beat drops. For a machine, it's a rich signal-processing
+        and representation-learning problem. This post walks through the key ideas.
+      </p>
+
+      <h2>Why raw audio is hard to learn from</h2>
+
+      <p>
+        A 30-second audio clip at 22 kHz sampling rate gives us <strong>660,000 data points</strong> —
+        just for a single example. Feeding that directly into a neural network is impractical:
+        the input space is enormous, the relevant patterns live at multiple timescales, and most
+        of the signal variation is perceptually irrelevant.
+      </p>
+      <p>
+        The solution is to compute a compact, perceptually-motivated representation first.
+        This is where the <em>Mel-spectrogram</em> comes in.
+      </p>
+
+      <h2>From waveform to Mel-spectrogram</h2>
+
+      <p>The pipeline has three stages:</p>
+
+      <h3>1. Short-Time Fourier Transform (STFT)</h3>
+      <p>
+        We slice the audio into overlapping windows (typically 25 ms, hopping 10 ms), and apply
+        the Fourier transform to each. This gives us a <em>spectrogram</em>: a 2D matrix of
+        (time × frequency), where each cell holds the magnitude of a frequency component at a
+        given moment.
+      </p>
+
+      <pre><code>import librosa
+import numpy as np
+
+y, sr = librosa.load("track.mp3", sr=22050)
+
+# STFT → magnitude spectrogram
+D = np.abs(librosa.stft(y, n_fft=2048, hop_length=512))
+print(D.shape)  # (1025, ~1292) for 30s clip</code></pre>
+
+      <h3>2. Mel filterbank</h3>
+      <p>
+        Human pitch perception is <strong>logarithmic</strong>, not linear. We hear the difference
+        between 100 Hz and 200 Hz as a much bigger interval than between 5000 Hz and 5100 Hz —
+        even though both are 100 Hz gaps. The Mel scale captures this by compressing the frequency
+        axis: lots of resolution at the low end, very little at the top.
+      </p>
+      <p>
+        We apply a bank of triangular filters distributed on this Mel scale to compress the 1025
+        frequency bins down to a manageable 128 or 64.
+      </p>
+
+      <pre><code>mel_spec = librosa.feature.melspectrogram(
+    y=y, sr=sr,
+    n_mels=128,
+    hop_length=512,
+    fmax=8000
+)
+
+# Convert to log scale (dB)
+log_mel = librosa.power_to_db(mel_spec, ref=np.max)</code></pre>
+
+      <h3>3. Log compression</h3>
+      <p>
+        We take the log of the Mel energies. This further compresses the dynamic range and makes
+        the representation more robust to volume variations — a quiet jazz track and a loud
+        rock track become more comparable.
+      </p>
+
+      <p>
+        The result is a <strong>(128 × T)</strong> image, where T depends on track length.
+        It looks like an image — and we can treat it like one.
+      </p>
+
+      <h2>Enter the CNN</h2>
+
+      <p>
+        Once we have a Mel-spectrogram, genre classification becomes an image classification
+        problem. Convolutional Neural Networks are a natural fit:
+      </p>
+      <ul>
+        <li><strong>Local patterns</strong> — a snare hit, a bass guitar riff — appear as distinct textures at specific frequencies and times.</li>
+        <li><strong>Translation invariance</strong> — the same chord progression starting 2 seconds later should still look like jazz.</li>
+        <li><strong>Hierarchical features</strong> — early layers pick up timbral textures; deeper layers encode rhythmic and structural patterns.</li>
+      </ul>
+
+      <blockquote>
+        The key insight: genre is encoded in the <em>texture</em> of the spectrogram, not in any single moment. CNNs are exactly the right tool for capturing this.
+      </blockquote>
+
+      <h2>A minimal PyTorch architecture</h2>
+
+      <pre><code>import torch
+import torch.nn as nn
+
+class GenreCNN(nn.Module):
+    def __init__(self, n_genres=10):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32), nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64), nn.ReLU(),
+            nn.MaxPool2d(2),
+
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128), nn.ReLU(),
+            nn.AdaptiveAvgPool2d((4, 4)),
+        )
+        self.classifier = nn.Sequential(
+            nn.Dropout(0.5),
+            nn.Linear(128 * 4 * 4, 256),
+            nn.ReLU(),
+            nn.Linear(256, n_genres),
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.flatten(1)
+        return self.classifier(x)</code></pre>
+
+      <h2>What's next</h2>
+
+      <p>
+        This basic CNN already achieves ~80% accuracy on GTZAN. The interesting improvements come from:
+      </p>
+      <ul>
+        <li><strong>Data augmentation</strong> — pitch shifting, time stretching, SpecAugment</li>
+        <li><strong>Multi-scale inputs</strong> — combining short and long window STFTs</li>
+        <li><strong>Attention mechanisms</strong> — letting the network focus on the most genre-discriminative parts of the spectrogram</li>
+        <li><strong>Multi-modal fusion</strong> — adding lyrics embeddings and metadata</li>
+      </ul>
+      <p>
+        In the next post I'll look at the GTZAN dataset in detail — and why its apparent simplicity
+        masks some tricky evaluation pitfalls.
+      </p>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-left">© 2026 Your Name — Built with HTML/CSS, hosted on GitHub Pages</div>
+  <div class="footer-links">
+    <a href="https://github.com/yourusername" target="_blank">GitHub</a>
+    <a href="https://linkedin.com/in/yourprofile" target="_blank">LinkedIn</a>
+    <a href="mailto:you@email.com">Email</a>
+  </div>
+</footer>
+
+<script src="../js/main.js"></script>
+</body>
+</html>

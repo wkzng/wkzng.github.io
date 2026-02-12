@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Blog — Your Name</title>
+  <meta name="description" content="Writing on machine learning, audio AI, LLMs, and learning theory."/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">YN.dev</a>
+  <div class="nav-links">
+    <a href="index.html">home</a>
+    <a href="research.html">research</a>
+    <a href="projects.html">projects</a>
+    <a href="blog.html" class="active">blog</a>
+    <a href="contact.html" class="nav-cta">contact</a>
+  </div>
+  <button class="nav-hamburger" onclick="toggleMenu()" aria-label="Menu">☰</button>
+</nav>
+
+<main>
+  <div class="page-hero">
+    <p class="section-label">// blog</p>
+    <h1>Writing</h1>
+    <p>Technical posts, research notes, and ideas on CS, ML, and beyond.</p>
+
+    <!-- Filter tags -->
+    <div class="tags-row" style="margin-top:1.5rem">
+      <button class="tag filter-btn active" data-filter="all" onclick="filterPosts('all', this)">All</button>
+      <button class="tag filter-btn" data-filter="music" onclick="filterPosts('music', this)" style="color:var(--accent2);border-color:rgba(224,92,175,0.3)">Music ML</button>
+      <button class="tag filter-btn" data-filter="ads" onclick="filterPosts('ads', this)" style="color:var(--accent3);border-color:rgba(45,224,188,0.3)">Comp. Advertising</button>
+      <button class="tag filter-btn" data-filter="llm" onclick="filterPosts('llm', this)" style="color:var(--accent);border-color:rgba(91,106,240,0.3)">LLMs</button>
+      <button class="tag filter-btn" data-filter="learning" onclick="filterPosts('learning', this)" style="color:#ffbe50;border-color:rgba(255,190,80,0.3)">Learning Theory</button>
+    </div>
+  </div>
+
+  <div class="posts-list" id="posts-container">
+
+    <a href="blog/music-genre-intro.html" class="post-row" data-category="music">
+      <div class="post-row-date">Feb 8, 2026</div>
+      <div>
+        <div class="post-row-title">How CNNs hear music: a tour of Mel-spectrograms</div>
+        <div class="post-row-excerpt">From raw waveform to genre label — the audio feature pipeline powering modern classifiers.</div>
+        <div class="tags-row" style="margin-top:0.5rem">
+          <span class="tag" style="color:var(--accent2)">Music ML</span>
+          <span class="tag">Deep Learning</span>
+          <span class="tag">Audio</span>
+        </div>
+      </div>
+      <div class="post-row-arrow">→</div>
+    </a>
+
+    <a href="blog/rtb-intro.html" class="post-row" data-category="ads">
+      <div class="post-row-date">Jan 22, 2026</div>
+      <div>
+        <div class="post-row-title">Real-time bidding and the multi-armed bandit</div>
+        <div class="post-row-excerpt">Why programmatic ad auctions are an online learning problem in disguise.</div>
+        <div class="tags-row" style="margin-top:0.5rem">
+          <span class="tag" style="color:var(--accent3)">Comp. Advertising</span>
+          <span class="tag">Bandits</span>
+          <span class="tag">Auctions</span>
+        </div>
+      </div>
+      <div class="post-row-arrow">→</div>
+    </a>
+
+    <a href="blog/llm-generalization.html" class="post-row" data-category="llm">
+      <div class="post-row-date">Jan 10, 2026</div>
+      <div>
+        <div class="post-row-title">Do LLMs generalize or memorize? A learning theory lens</div>
+        <div class="post-row-excerpt">Applying VC dimension and PAC-learning intuitions to large language model behavior.</div>
+        <div class="tags-row" style="margin-top:0.5rem">
+          <span class="tag" style="color:var(--accent)">LLMs</span>
+          <span class="tag" style="color:#ffbe50">Learning Theory</span>
+          <span class="tag">Generalization</span>
+        </div>
+      </div>
+      <div class="post-row-arrow">→</div>
+    </a>
+
+    <a href="blog/vc-dimension.html" class="post-row" data-category="learning">
+      <div class="post-row-date">Dec 19, 2025</div>
+      <div>
+        <div class="post-row-title">VC dimension from scratch — with pictures</div>
+        <div class="post-row-excerpt">A visual, intuitive walk through one of the most fundamental concepts in statistical learning theory.</div>
+        <div class="tags-row" style="margin-top:0.5rem">
+          <span class="tag" style="color:#ffbe50">Learning Theory</span>
+          <span class="tag">PAC Learning</span>
+        </div>
+      </div>
+      <div class="post-row-arrow">→</div>
+    </a>
+
+    <a href="blog/music-genre-intro.html" class="post-row" data-category="music">
+      <div class="post-row-date">Dec 3, 2025</div>
+      <div>
+        <div class="post-row-title">GTZAN dataset: what it is, why it matters, where it falls short</div>
+        <div class="post-row-excerpt">A critical look at the most widely used music genre dataset and the biases it introduces.</div>
+        <div class="tags-row" style="margin-top:0.5rem">
+          <span class="tag" style="color:var(--accent2)">Music ML</span>
+          <span class="tag">Datasets</span>
+          <span class="tag">Evaluation</span>
+        </div>
+      </div>
+      <div class="post-row-arrow">→</div>
+    </a>
+
+    <a href="blog/rtb-intro.html" class="post-row" data-category="ads">
+      <div class="post-row-date">Nov 14, 2025</div>
+      <div>
+        <div class="post-row-title">How first-price auctions changed digital advertising</div>
+        <div class="post-row-excerpt">The 2019 industry shift to first-price auctions and its implications for bid optimization strategies.</div>
+        <div class="tags-row" style="margin-top:0.5rem">
+          <span class="tag" style="color:var(--accent3)">Comp. Advertising</span>
+          <span class="tag">Game Theory</span>
+        </div>
+      </div>
+      <div class="post-row-arrow">→</div>
+    </a>
+
+  </div>
+</main>
+
+<footer>
+  <div class="footer-left">© 2026 Your Name — Built with HTML/CSS, hosted on GitHub Pages</div>
+  <div class="footer-links">
+    <a href="https://github.com/yourusername" target="_blank">GitHub</a>
+    <a href="https://linkedin.com/in/yourprofile" target="_blank">LinkedIn</a>
+    <a href="mailto:you@email.com">Email</a>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
