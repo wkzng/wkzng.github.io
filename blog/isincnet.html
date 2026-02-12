@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iSincNet: Lightweight SincNet Spectrogram Vocoder &mdash; Williams Zanga</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a href="../index.html" class="site-name">Williams Zanga</a>
+    <nav>
+      <a href="../blog.html">Blog</a>
+      <a href="../publications.html">Publications</a>
+      <a href="../resume.html">Resume</a>
+      <a href="https://github.com/wkzng" target="_blank">GitHub</a>
+      <a href="mailto:zanga.williams@gmail.com">Email</a>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+        <span id="theme-icon">&#9790;</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <a href="../blog.html" class="article-back">&larr; back</a>
+
+  <div class="article-header">
+    <h1>iSincNet: Lightweight SincNet Spectrogram Vocoder</h1>
+    <div class="article-meta">2026-01-12 &middot; <a href="https://github.com/wkzng/iSincNet" target="_blank">Code</a></div>
+  </div>
+
+  <div class="article-body">
+
+    <figure>
+      <img src="../assets/isincnet/illustrations.png" alt="iSincNet architecture: a speech waveform is split into chunks, each processed by a bank of learnable SincNet filters to produce a spectrogram.">
+      <figcaption>A waveform chunk is passed through a bank of learnable sinc filters to produce one column of the spectrogram.</figcaption>
+    </figure>
+
+    <p>
+      Traditional audio processing pipelines rely on the Short-Time Fourier Transform (STFT) to convert
+      waveforms into spectrograms. The STFT uses a fixed set of sinusoidal basis functions &mdash; which means
+      the frequency resolution is baked in at design time. <strong>iSincNet</strong> takes a different approach:
+      it replaces the fixed STFT with a learnable filterbank based on parametric sinc functions, producing
+      a spectrogram representation that can be jointly optimized with downstream tasks.
+    </p>
+
+    <p>
+      This post walks through the encoder and decoder architecture. The key insight is that the entire
+      encoding step can be written as a single matrix multiplication, making it both interpretable and fast.
+    </p>
+
+    <h2>Examples</h2>
+
+    <p>
+      Before diving into the math, here are two audio samples and their corresponding SincNet spectrograms.
+      Each sample is shown in four variants: signed vs. absolute value, and causal vs. non-causal encoder.
+    </p>
+
+    <div class="sample-block">
+      <h4>Music &mdash; Space of Souls (DJ Max)</h4>
+      <audio controls preload="metadata">
+        <source src="../assets/isincnet/spaceofsouls/audio.wav" type="audio/wav">
+      </audio>
+      <div class="spec-grid">
+        <figure>
+          <img src="../assets/isincnet/spaceofsouls/mel_sgn_ncsl.jpeg" alt="Signed, non-causal spectrogram">
+          <figcaption>Signed, non-causal</figcaption>
+        </figure>
+        <figure>
+          <img src="../assets/isincnet/spaceofsouls/mel_sgn_csl.jpeg" alt="Signed, causal spectrogram">
+          <figcaption>Signed, causal</figcaption>
+        </figure>
+        <figure>
+          <img src="../assets/isincnet/spaceofsouls/mel_abs_ncsl.jpeg" alt="Absolute, non-causal spectrogram">
+          <figcaption>Absolute, non-causal</figcaption>
+        </figure>
+        <figure>
+          <img src="../assets/isincnet/spaceofsouls/mel_abs_csl.jpeg" alt="Absolute, causal spectrogram">
+          <figcaption>Absolute, causal</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="sample-block">
+      <h4>Speech</h4>
+      <audio controls preload="metadata">
+        <source src="../assets/isincnet/speech/audio.wav" type="audio/wav">
+      </audio>
+      <div class="spec-grid">
+        <figure>
+          <img src="../assets/isincnet/speech/mel_sgn_ncsl.jpeg" alt="Signed, non-causal spectrogram">
+          <figcaption>Signed, non-causal</figcaption>
+        </figure>
+        <figure>
+          <img src="../assets/isincnet/speech/mel_sgn_csl.jpeg" alt="Signed, causal spectrogram">
+          <figcaption>Signed, causal</figcaption>
+        </figure>
+        <figure>
+          <img src="../assets/isincnet/speech/mel_abs_ncsl.jpeg" alt="Absolute, non-causal spectrogram">
+          <figcaption>Absolute, non-causal</figcaption>
+        </figure>
+        <figure>
+          <img src="../assets/isincnet/speech/mel_abs_csl.jpeg" alt="Absolute, causal spectrogram">
+          <figcaption>Absolute, causal</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <h2>Encoder</h2>
+
+    <p>
+      The encoder transforms a raw audio waveform into a 2D spectrogram. The process has two steps:
+      split the waveform into overlapping chunks, then pass each chunk through a bank of learned filters.
+    </p>
+
+    <h3>Chunking the waveform</h3>
+
+    <p>
+      Given a discrete waveform $x \in \mathbb{R}^{N}$, we extract overlapping frames of length $K$
+      with a hop size $H$. This produces $T = \lfloor (N - K) / H \rfloor + 1$ frames, which we stack
+      column-wise into a matrix:
+    </p>
+
+    $$\mathbf{X} \in \mathbb{R}^{K \times T}$$
+
+    <p>
+      Each column $\mathbf{X}_{:,t}$ is a windowed segment of the original signal centered at time $t$.
+      This is identical to what the STFT does before applying the Fourier basis &mdash; the difference is
+      what comes next.
+    </p>
+
+    <h3>The filterbank</h3>
+
+    <p>
+      Instead of using fixed sinusoidal basis functions, iSincNet uses a bank of $F$ parametric
+      bandpass filters. Each filter $h_f$ is defined as the difference of two sinc functions:
+    </p>
+
+    $$h_f[n] = 2 f_2 \, \text{sinc}(2 f_2 n) - 2 f_1 \, \text{sinc}(2 f_1 n)$$
+
+    <p>
+      where $f_1$ and $f_2$ are the learnable low and high cutoff frequencies of the $f$-th filter.
+      These parameters are the only things being learned &mdash; two scalars per filter. We stack
+      all $F$ filters row-wise into a filter matrix:
+    </p>
+
+    $$\mathbf{W} \in \mathbb{R}^{F \times K}$$
+
+    <h3>Spectrogram as a matrix product</h3>
+
+    <p>
+      The encoding step is then simply:
+    </p>
+
+    $$\boxed{\mathbf{S} = \mathbf{W} \, \mathbf{X}}$$
+
+    <p>where:</p>
+
+    <ul>
+      <li>$\mathbf{S} \in \mathbb{R}^{F \times T}$ &mdash; the output spectrogram</li>
+      <li>$\mathbf{W} \in \mathbb{R}^{F \times K}$ &mdash; the learnable filter matrix</li>
+      <li>$\mathbf{X} \in \mathbb{R}^{K \times T}$ &mdash; the chunked waveform</li>
+    </ul>
+
+    <p>
+      Each entry $S_{f,t}$ is the inner product of filter $f$ with chunk $t$ &mdash; exactly a
+      convolution evaluated at one time step. The full spectrogram is computed in a single
+      matrix multiply, which is highly efficient on GPUs.
+    </p>
+
+    <p>
+      Note that unlike the STFT, this spectrogram is <strong>real-valued and signed</strong>.
+      There is no magnitude/phase split. The sign carries information about the phase relationship
+      between the filter and the signal, which turns out to be useful for reconstruction.
+    </p>
+
+    <h3>Filter initialization: linear vs. mel scale</h3>
+
+    <p>
+      The cutoff frequencies $(f_1, f_2)$ can be initialized in different ways, which determines
+      the initial frequency resolution of the filterbank:
+    </p>
+
+    <p>
+      <strong>Linear scale.</strong> Filters are uniformly spaced across the frequency range
+      $[0, f_s/2]$. For $F$ filters:
+    </p>
+
+    $$f_1^{(i)} = \frac{i}{F} \cdot \frac{f_s}{2}, \quad f_2^{(i)} = \frac{i+1}{F} \cdot \frac{f_s}{2}$$
+
+    <p>
+      This gives equal bandwidth per filter &mdash; fine for broadband analysis, but wastes resolution
+      at low frequencies where perceptual sensitivity is highest.
+    </p>
+
+    <p>
+      <strong>Mel scale.</strong> Filters are uniformly spaced on the mel scale, then mapped back to Hz:
+    </p>
+
+    $$m = 2595 \log_{10}\!\left(1 + \frac{f}{700}\right)$$
+
+    <p>
+      This concentrates more filters at low frequencies, matching human auditory perception. In practice,
+      mel-initialized filters produce spectrograms that are more informative for speech and music tasks
+      out of the box. Since the cutoffs are learnable, the network can refine both initializations
+      during training.
+    </p>
+
+    <h2>Decoder</h2>
+
+    <p>
+      The decoder inverts the process: given a spectrogram $\mathbf{S} \in \mathbb{R}^{F \times T}$,
+      reconstruct the waveform $\hat{x} \in \mathbb{R}^{N}$. This is the vocoder component of iSincNet.
+    </p>
+
+    <p>
+      The architecture uses a lightweight convolutional network that operates directly on the
+      spectrogram representation. The decoder consists of:
+    </p>
+
+    <ol>
+      <li>
+        <strong>Transposed convolution layers</strong> that progressively upsample the time dimension
+        from $T$ frames back to $N$ samples, while reducing the frequency dimension from $F$ channels
+        down to 1 (mono audio).
+      </li>
+      <li>
+        <strong>Overlap-add synthesis.</strong> The transposed convolutions implicitly perform
+        overlap-add when the stride matches the encoder's hop size $H$, ensuring smooth transitions
+        between reconstructed frames.
+      </li>
+    </ol>
+
+    <p>
+      Because the encoder spectrogram is signed (not magnitude-only), the decoder does not need to
+      solve a phase estimation problem &mdash; unlike Griffin-Lim or neural vocoders that work from
+      mel spectrograms. This is a significant advantage: phase estimation is the hard part of
+      waveform reconstruction, and iSincNet sidesteps it entirely.
+    </p>
+
+    <p>
+      The decoder is trained to minimize the L1 reconstruction loss in the time domain:
+    </p>
+
+    $$\mathcal{L} = \| x - \hat{x} \|_1$$
+
+    <p>
+      combined with a multi-resolution STFT loss that encourages spectral consistency across
+      different window sizes.
+    </p>
+
+    <h2>Putting it together</h2>
+
+    <p>
+      The full iSincNet pipeline is:
+    </p>
+
+    $$x \;\xrightarrow{\text{chunk}}\; \mathbf{X} \;\xrightarrow{\;\mathbf{W}\;}\; \mathbf{S} \;\xrightarrow{\text{decode}}\; \hat{x}$$
+
+    <p>
+      The encoder is fully defined by the filter parameters (two scalars per filter), making it
+      extremely lightweight and interpretable. The decoder is a small convolutional network. Together,
+      the system is fast enough for real-time audio processing and produces reconstructions competitive
+      with much larger GAN-based vocoders.
+    </p>
+
+    <p>
+      Pretrained models for various configurations (16 kHz / 44.1 kHz, 128&ndash;512 filters, linear / mel scale)
+      are available in the <a href="https://github.com/wkzng/iSincNet" target="_blank">repository</a>.
+    </p>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <span class="footer-text">&copy; 2026 Williams Zanga</span>
+  </div>
+</footer>
+
+<script src="../js/main.js"></script>
+</body>
+</html>

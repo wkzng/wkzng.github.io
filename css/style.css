@@ -294,6 +294,63 @@ main {
   font-style: italic;
 }
 
+/* ─── Figures & Media ─────────────────────────────────── */
+.article-body figure {
+  margin: 1.5rem 0;
+}
+.article-body figure img {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.article-body figcaption {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.article-body audio {
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
+/* Spectrogram grid: 2x2 table */
+.spec-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
+}
+.spec-grid figure {
+  margin: 0;
+}
+.spec-grid img {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.spec-grid figcaption {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+  text-align: center;
+}
+
+.sample-block {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.sample-block h4 {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  color: var(--text);
+}
+
 /* ─── Publications ────────────────────────────────────── */
 .pub-list {
   display: flex;
