@@ -1,233 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Your Name — CS Researcher</title>
-  <meta name="description" content="CS researcher working on music genre classification, computational advertising, LLMs, and learning theory."/>
-  <link rel="stylesheet" href="css/style.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>williams zanga</title>
+  <meta name="description" content="Research blog on machine learning, computational advertising, and learning theory.">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<!-- ─── NAV ─────────────────────────────── -->
-<nav>
-  <a href="index.html" class="nav-logo">YN.dev</a>
-  <div class="nav-links">
-    <a href="index.html" class="active">home</a>
-    <a href="research.html">research</a>
-    <a href="projects.html">projects</a>
-    <a href="blog.html">blog</a>
-    <a href="contact.html" class="nav-cta">contact</a>
+<header>
+  <div class="container">
+    <a href="index.html" class="site-name"></a>
+    <nav>
+      <a href="blog.html">Blog</a>
+      <a href="publications.html">Publications</a>
+      <a href="resume.html">Resume</a>
+      <a href="https://github.com/wkzng" target="_blank">GitHub</a>
+      <a href="mailto:zanga.williams@gmail.com">Email</a>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+        <span id="theme-icon">&#9790;</span>
+      </button>
+    </nav>
   </div>
-  <button class="nav-hamburger" onclick="toggleMenu()" aria-label="Menu">☰</button>
-</nav>
+</header>
 
-<main>
+<main class="container">
 
-  <!-- ─── HERO ──────────────────────────── -->
-  <section class="hero">
-    <div class="hero-content">
-      <div class="hero-tag">Open to collaboration</div>
-      <h1>
-        Hi, I'm
-        <span class="name-accent">Your Name</span>
-      </h1>
-      <p class="hero-desc">
-        CS researcher exploring the intersection of <strong>machine learning, audio</strong>, and <strong>decision-making systems</strong>.
-        I write about music genre classification, computational advertising, LLMs, and learning theory.
-      </p>
-      <div class="hero-actions">
-        <a href="research.html" class="btn btn-primary">View Research →</a>
-        <a href="blog.html" class="btn btn-ghost">Read the Blog</a>
-      </div>
-    </div>
+  <div class="bio">
+    <h1>Williams Zanga</h1>
+    <p>
+        I am an AI/ML researcher insterested in Memory Augmented Neural Networks, Computational Advertising and Applied Music.
+    </p>
+    <p>
+        I received an MSc in Computing Science from Imperial College London under the advisement of Professor William Knottenbelt
+        and an MSc in Aerospace Engineering from the Higher Institute of Aeronautics and Space (ISAE-Supaero).
+    </p>
+     <p>
+        This is where I write about ideas, research notes, and things I'm figuring out.
+     </p>
+  </div>
 
-    <div class="hero-visual">
-      <div class="hero-orb"></div>
-      <div class="hero-card-stack">
-        <div class="topic-card">
-          <span class="topic-icon">🎵</span>
-          <div class="topic-label">
-            <strong>Music Genre Classification</strong>
-            Deep learning on audio features
-          </div>
-        </div>
-        <div class="topic-card">
-          <span class="topic-icon">📢</span>
-          <div class="topic-label">
-            <strong>Computational Advertising</strong>
-            Auction theory & online learning
-          </div>
-        </div>
-        <div class="topic-card">
-          <span class="topic-icon">🤖</span>
-          <div class="topic-label">
-            <strong>Large Language Models</strong>
-            Reasoning & alignment
-          </div>
-        </div>
-        <div class="topic-card">
-          <span class="topic-icon">📐</span>
-          <div class="topic-label">
-            <strong>Learning Theory</strong>
-            PAC, VC dimension, bounds
-          </div>
-        </div>
-      </div>
-    </div>
+  <section class="posts-section">
+    <h2>Posts</h2>
+    <ul class="post-list">
+      <li class="post-item">
+        <span class="post-date">2026-01-12</span>
+        <span class="post-title"><a href="blog/isincnet.html">iSincNet: Lightweight SincNet Spectrogram Vocoder</a></span>
+      </li>
+      <!-- <li class="post-item">
+        <span class="post-date">2026-02-12</span>
+        <span class="post-title"><a href="blog/comp-ads.html">Real-time bidding and the multi-armed bandit</a></span>
+      </li> -->
+      <!-- <li class="post-item">
+        <span class="post-date">2026-02-08</span>
+        <span class="post-title"><a href="blog/music-genre-intro.html">How CNNs hear music: a tour of Mel-spectrograms</a></span>
+      </li> -->
+    </ul>
   </section>
 
-  <div class="divider"></div>
-
-  <!-- ─── ABOUT STRIP ────────────────────── -->
-  <section>
-    <p class="section-label">// about</p>
-    <h2 class="section-title">Building systems that learn</h2>
-    <div class="about-strip">
-      <div class="about-text">
-        <p>
-          I'm a computer science researcher passionate about the theoretical foundations
-          and practical applications of machine learning. My work spans <strong>audio intelligence</strong>,
-          <strong>online decision-making</strong>, and the mathematical bedrock of learning algorithms.
-        </p>
-        <p>
-          When I'm not proving bounds or training models, I write on this blog to document
-          findings, share ideas, and explore the edges of what machines can learn.
-        </p>
-        <div class="tags-row">
-          <span class="tag">PyTorch</span><span class="tag">Python</span>
-          <span class="tag">JAX</span><span class="tag">Transformers</span>
-          <span class="tag">Scikit-learn</span><span class="tag">C++</span>
-          <span class="tag">LaTeX</span>
+  <section class="posts-section">
+    <h2>Selected Publications</h2>
+    <div class="pub-list">
+      <div class="pub-item">
+        <div class="pub-title"><a href="publications.html">Irreducible Loss Floors in Gradient Descent Convergence and Energy Footprint</a></div>
+        <div class="pub-authors"><strong>Williams Zanga</strong></div>
+        <div class="pub-venue">OpenReview, 2025</div>
+        <div class="pub-links">
+          <a href="https://openreview.net/pdf?id=QJtanJS4T9" target="_blank">PDF</a>
+          <a href="https://github.com/wkzng/loss-state-rate" target="_blank">Code</a>
         </div>
       </div>
-      <div class="about-stats">
-        <div class="stat-box">
-          <div class="stat-num">4</div>
-          <div class="stat-desc">Active research topics</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-num">∞</div>
-          <div class="stat-desc">Curiosity remaining</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-num">12+</div>
-          <div class="stat-desc">Blog posts published</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-num">MSc</div>
-          <div class="stat-desc">CS — In progress</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="divider"></div>
-
-  <!-- ─── FEATURED POSTS ─────────────────── -->
-  <section>
-    <p class="section-label">// latest writing</p>
-    <h2 class="section-title">From the blog</h2>
-    <p class="section-subtitle">Technical deep-dives, research notes, and thoughts on machine learning.</p>
-    <div class="cards-grid">
-
-      <a href="blog/music-genre-intro.html" class="card blog-card">
-        <div class="card-tag music">Music ML</div>
-        <div class="blog-card card-meta">
-          <span class="card-date">Feb 8, 2026</span>
-        </div>
-        <h3>How CNNs hear music: a tour of Mel-spectrograms</h3>
-        <p>From raw waveform to genre label — unpacking the audio feature pipeline that powers modern music classification systems.</p>
-        <div class="card-footer">
-          <span>8 min read</span>
-          <span class="card-link">Read more →</span>
-        </div>
-      </a>
-
-      <a href="blog/rtb-intro.html" class="card blog-card">
-        <div class="card-tag ads">Comp. Advertising</div>
-        <div class="blog-card card-meta">
-          <span class="card-date">Jan 22, 2026</span>
-        </div>
-        <h3>Real-time bidding and the multi-armed bandit</h3>
-        <p>Why programmatic ad auctions are really an online learning problem in disguise — and what exploration-exploitation means for a DSP.</p>
-        <div class="card-footer">
-          <span>11 min read</span>
-          <span class="card-link">Read more →</span>
-        </div>
-      </a>
-
-      <a href="blog/llm-generalization.html" class="card blog-card">
-        <div class="card-tag llm">LLMs</div>
-        <div class="blog-card card-meta">
-          <span class="card-date">Jan 10, 2026</span>
-        </div>
-        <h3>Do LLMs generalize or memorize? A learning theory lens</h3>
-        <p>Applying VC dimension and PAC-learning intuitions to understand why large language models perform so well — and where they fail.</p>
-        <div class="card-footer">
-          <span>14 min read</span>
-          <span class="card-link">Read more →</span>
-        </div>
-      </a>
-
-    </div>
-    <div style="margin-top:2rem">
-      <a href="blog.html" class="btn btn-ghost">All posts →</a>
-    </div>
-  </section>
-
-  <div class="divider"></div>
-
-  <!-- ─── FEATURED RESEARCH ──────────────── -->
-  <section>
-    <p class="section-label">// research</p>
-    <h2 class="section-title">Current work</h2>
-    <p class="section-subtitle">Projects at the intersection of theory and application.</p>
-    <div class="cards-grid">
-
-      <a href="research/music-genre.html" class="card">
-        <div class="card-tag music">Music ML</div>
-        <h3>Multi-modal Music Genre Classification</h3>
-        <p>Fusing audio spectrograms, lyrics embeddings, and metadata for robust genre prediction across noisy real-world datasets.</p>
-        <div class="card-footer">
-          <span>In progress</span>
-          <span class="card-link">Details →</span>
-        </div>
-      </a>
-
-      <a href="research/comp-ads.html" class="card">
-        <div class="card-tag ads">Comp. Advertising</div>
-        <h3>Regret Bounds in Repeated Second-Price Auctions</h3>
-        <p>Theoretical analysis of bidding strategies with incomplete information and adversarial budget constraints.</p>
-        <div class="card-footer">
-          <span>Manuscript</span>
-          <span class="card-link">Details →</span>
-        </div>
-      </a>
-
-      <a href="research/learning-theory.html" class="card">
-        <div class="card-tag learning">Learning Theory</div>
-        <h3>Generalization in Overparameterized Models</h3>
-        <p>Connecting classical PAC-learning bounds with the surprising empirical generalization of modern neural networks.</p>
-        <div class="card-footer">
-          <span>Working paper</span>
-          <span class="card-link">Details →</span>
-        </div>
-      </a>
-
+      
     </div>
   </section>
 
 </main>
 
-<!-- ─── FOOTER ──────────────────────────── -->
 <footer>
-  <div class="footer-left">© 2026 Your Name — Built with HTML/CSS, hosted on GitHub Pages</div>
-  <div class="footer-links">
-    <a href="https://github.com/yourusername" target="_blank">GitHub</a>
-    <a href="https://linkedin.com/in/yourprofile" target="_blank">LinkedIn</a>
-    <a href="https://scholar.google.com" target="_blank">Scholar</a>
-    <a href="mailto:you@email.com">Email</a>
+  <div class="container">
+    <span class="footer-text">&copy; 2026 Williams Zanga</span>
   </div>
 </footer>
 
