@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-time bidding and the multi-armed bandit &mdash; wkzng</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a href="../index.html" class="site-name">wkzng</a>
+    <nav>
+      <a href="../index.html">blog</a>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+        <span id="theme-icon">&#9790;</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <a href="../index.html" class="article-back">&larr; back</a>
+
+  <div class="article-header">
+    <h1>Real-time bidding and the multi-armed bandit</h1>
+    <div class="article-meta">2026-02-12</div>
+  </div>
+
+  <div class="article-body">
+
+    <p>
+      Every time you load a webpage with ads, an auction happens in under 100 milliseconds.
+      A demand-side platform (DSP) decides how much to bid for the right to show you an ad,
+      competing against dozens of other bidders &mdash; all without knowing the other bids.
+      This is <strong>real-time bidding</strong> (RTB), and it turns out to be a beautiful
+      instance of the exploration-exploitation tradeoff.
+    </p>
+
+    <h2>The setup</h2>
+
+    <p>
+      In a repeated second-price auction, the winner pays the second-highest bid. A DSP
+      participates in millions of these auctions per day. For each impression opportunity,
+      it must decide a bid <em>b</em> based on some context (user features, page content,
+      time of day) without observing competing bids in advance.
+    </p>
+
+    <p>
+      The DSP's goal is to maximize total value &mdash; say, conversions &mdash; subject to
+      a daily budget constraint. Bid too high and you burn through budget on low-value
+      impressions. Bid too low and you miss high-value opportunities. The optimal strategy
+      depends on the <strong>distribution of competing bids</strong>, which is unknown and
+      non-stationary.
+    </p>
+
+    <h2>Why this is a bandit problem</h2>
+
+    <p>
+      At its core, the DSP faces a classic multi-armed bandit problem. Each "arm" corresponds
+      to a bid level (or a bid shading factor). Pulling an arm means submitting that bid.
+      The reward is the value of winning the impression minus the price paid.
+    </p>
+
+    <ul>
+      <li><strong>Exploration</strong>: bidding at different levels to learn the competing bid distribution.</li>
+      <li><strong>Exploitation</strong>: bidding at the level that maximizes expected surplus given current knowledge.</li>
+    </ul>
+
+    <p>
+      The budget constraint adds a twist: this is a <em>bandits with knapsacks</em> problem.
+      Each pull consumes a random amount of budget (the price paid), and the agent must
+      balance reward maximization against resource depletion.
+    </p>
+
+    <h2>A simple UCB approach</h2>
+
+    <p>
+      One natural strategy is Upper Confidence Bound (UCB). Discretize the bid space into
+      <em>K</em> levels. For each level, maintain an estimate of the expected surplus and
+      a confidence interval. Select the bid level with the highest upper confidence bound:
+    </p>
+
+    <pre><code>import numpy as np
+
+class UCBBidder:
+    def __init__(self, bid_levels, budget):
+        self.K = len(bid_levels)
+        self.bids = np.array(bid_levels)
+        self.budget = budget
+        self.counts = np.zeros(self.K)
+        self.rewards = np.zeros(self.K)
+
+    def select_bid(self, t):
+        # play each arm at least once
+        if t < self.K:
+            return self.bids[t]
+
+        means = self.rewards / self.counts
+        bonus = np.sqrt(2 * np.log(t) / self.counts)
+        ucb = means + bonus
+        return self.bids[np.argmax(ucb)]
+
+    def update(self, arm_idx, reward):
+        self.counts[arm_idx] += 1
+        self.rewards[arm_idx] += reward</code></pre>
+
+    <p>
+      This is a toy example. In practice, DSPs use contextual bandits &mdash; the bid depends
+      on features of the impression &mdash; and the budget pacing layer modulates bids
+      throughout the day to avoid early exhaustion.
+    </p>
+
+    <h2>Regret and what it means here</h2>
+
+    <p>
+      The standard notion of regret compares the agent's cumulative reward to the best
+      fixed arm in hindsight. For RTB, this translates to: how much surplus did we leave
+      on the table compared to always bidding at the single best level?
+    </p>
+
+    <p>
+      UCB achieves <strong>O(sqrt(KT log T))</strong> regret over <em>T</em> rounds with
+      <em>K</em> arms. With budget constraints, tighter analysis is needed &mdash;
+      Badanidiyuru et al. (2018) show that a modified UCB achieves O(sqrt(KT)) regret
+      in the bandits-with-knapsacks setting under mild conditions.
+    </p>
+
+    <blockquote>
+      The key insight: RTB is not just an engineering problem. The bidding agent is
+      simultaneously learning the environment and making irrevocable decisions under
+      resource constraints &mdash; exactly the setting that online learning theory was
+      built to analyze.
+    </blockquote>
+
+    <h2>What's next</h2>
+
+    <p>
+      In a follow-up post, I'll look at how the shift from second-price to first-price
+      auctions (which happened across the ad industry around 2019) changes the bidding
+      problem. In first-price auctions, the winner pays their own bid, which introduces
+      a bid shading problem that makes the learning task considerably harder.
+    </p>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <span class="footer-text">&copy; 2026 wkzng</span>
+    <div class="footer-links">
+      <a href="https://github.com/wkzng" target="_blank">GitHub</a>
+      <a href="mailto:zanga.williams@gmail.com">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../js/main.js"></script>
+</body>
+</html>
