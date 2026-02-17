@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdTech 1: What Makes an Ad Clickable? &mdash; Williams Zanga</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a href="../index.html" class="site-name">Williams Zanga</a>
+    <nav>
+      <a href="../blog.html">Blog</a>
+      <a href="../publications.html">Publications</a>
+      <a href="../resume.html">Resume</a>
+      <a href="https://github.com/wkzng" target="_blank">GitHub</a>
+      <a href="mailto:zanga.williams@gmail.com">Email</a>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+        <span id="theme-icon">&#9790;</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <a href="../blog.html" class="article-back">&larr; back</a>
+
+  <div class="article-header">
+    <h1>AdTech 1: What Makes an Ad Clickable?</h1>
+    <p class="article-subtitle"><em>Decomposing click-through rate into viewability and quality</em></p>
+    <div class="article-meta">2026-02-12</div>
+  </div>
+
+  <div class="article-body">
+    <p>
+      What makes a user click an ad? In digital advertising, two things need to happen: the user must
+      <strong>see</strong> the ad, and the ad must be <strong>compelling</strong> enough to
+      act on. In other words, clickability decomposes into two independent factors:
+    </p>
+
+    <ul>
+      <li><strong>Viewability</strong> ($V$) &mdash; how likely is it that the ad is actually seen?</li>
+      <li><strong>Quality</strong> ($Q$) &mdash; given the ad is seen, how relevant and persuasive is it?</li>
+    </ul>
+
+    <p>
+      This post formalizes that intuition. Starting from first principles, we derive
+      a decomposition of the observed click-through rate:
+    </p>
+
+    $$P(\text{click} \mid \text{context}) = Q \cdot \bigl[\, V + r \cdot (1 - V) \,\bigr]$$
+
+    <p>
+      where $r \in (0,1)$ is a small false-click factor accounting for accidental or bot clicks on
+      unseen ads. The derivation makes precise what advertisers mean when they say an ad
+      &ldquo;performs well&rdquo; &mdash; and where the levers actually are.
+    </p>
+
+    <h2>Setup</h2>
+
+    <p>
+      In this framework, we consider three random variables and one latent event:
+    </p>
+
+    <ul>
+      <li><strong>click</strong> &mdash; the user clicks on the ad</li>
+      <li><strong>context</strong> &mdash; the publication context (site, position, device, etc.)</li>
+      <li><strong>view</strong> &mdash; the ad is actually seen by the user (latent)</li>
+    </ul>
+
+    <p>
+      The quantity we often observe in logs is $P(\text{click} \mid \text{context})$,
+      but what we really care about is the <em>true</em> click rate conditioned on the ad
+      being viewed: $P(\text{click} \mid \text{context}, \text{view})$.
+    </p>
+
+    <h2>Derivation</h2>
+
+    <p>
+      Start from the joint probability and marginalize over the latent view event:
+    </p>
+
+    $$P(\text{click}, \text{context}) = P(\text{click},\text{context}, \text{view}) + P(\text{click},\text{context}, \neg\text{view})$$
+
+    <p>
+      Applying the Bayes' rule to each term:
+    </p>
+
+    $$P(\text{click}, \text{context}) = P(\text{click} \mid \text{context}, \text{view})\, P(\text{context}, \text{view}) + P(\text{click} \mid \text{context}, \neg\text{view})\, P(\text{context}, \neg\text{view})$$
+
+    <p>
+      Dividing both sides by $P(\text{context})$:
+    </p>
+
+    $$P(\text{click} \mid \text{context}) = P(\text{click} \mid \text{context}, \text{view})\, P(\text{view} \mid  \text{context}) + P(\text{click} \mid \text{context}, \neg\text{view})\, P(\neg\text{view} \mid \text{context})$$
+
+    <h2>Viewability and the false-click factor</h2>
+
+    <p>
+      We introduce two quantities to simplify the expression:
+    </p>
+
+    <p>
+      <strong>Viewability index.</strong> The probability that a displayed ad is actually viewed in a given context:
+    </p>
+
+    $$V = P(\text{view} \mid \text{context})$$
+
+    <p>
+      <strong>False-click factor.</strong> A scalar $r \in [0, 1]$ that captures the ratio of
+      click probability when the ad is <em>not</em> viewed versus when it is:
+    </p>
+
+    $$P(\text{click} \mid \text{context}, \neg\text{view}) = r \cdot P(\text{click} \mid \text{context}, \text{view})$$
+
+    <p>
+      False clicks can be attributed to multiple factors such as accidental clicks, bots.
+      When $r = 0$, users never click ads they haven't seen (the ideal case).
+      When $r > 0$, there is some residual click rate from accidental clicks, bot traffic,
+      or misattributed events. In practise we can expect $r$ to be negligible overall.
+    </p>
+
+    <p>
+      Substituting into the boxed equation and writing
+    </p>
+      $$Q = P(\text{click} \mid \text{context}, \text{view})$$
+
+    <p>
+      leading to the final identity
+    </p>
+
+    $$\boxed{P(\text{click} \mid \text{context}) = Q \cdot \bigl[\, V + r \cdot (1 - V) \,\bigr]}$$
+
+    <p>
+      The term in brackets is a <strong>viewability correction factor</strong>. It tells us how much
+      of the true CTR is preserved in the observed CTR, as a function of viewability $V$ and
+      false-click rate $r$.
+    </p>
+
+    <h2>Interpretation</h2>
+
+    <ul>
+      <li>
+        When $V = 1$ (every displayed ad is viewed), the correction factor equals $1$ regardless
+        of $r$, and the observed CTR matches the true CTR.
+      </li>
+      <li>
+        When $V = 0$ (no ad is viewed), the correction factor equals $r$ &mdash; the observed
+        CTR is purely from false clicks.
+      </li>
+      <li>
+        For intermediate values, the correction factor interpolates linearly between $r$ and $1$.
+      </li>
+    </ul>
+
+    <h2>Visualisation</h2>
+
+    <p>
+      The plot below shows the correction factor $V + r\,(1 - V)$ as a function of viewability $V$,
+      for several values of the false-click factor $r$.
+    </p>
+
+    <figure>
+      <img src="../assets/adtech1/correction_factor.png" alt="Viewability correction factor for various values of r">
+      <figcaption>Correction factor $V + r(1 - V)$ vs. viewability $V$ for $r \in \{0, 0.05, 0.1, 0.2, 0.5\}$.</figcaption>
+    </figure>
+
+    <h2>Conclusion: two levers for clickability</h2>
+
+    <p>
+      The decomposition $\text{CTR} = Q \cdot [V + r(1-V)]$ separates clickability into two
+      fundamentally different problems that require different solutions:
+    </p>
+
+    <p>
+      <strong>Viewability $V$</strong> is a <em>supply-side</em> quantity. It depends on where
+      the ad is placed (above or below the fold), on which device it is rendered, and on user
+      scroll behaviour. Improving $V$ is about better inventory selection, page layout, and
+      ad placement strategy. It has nothing to do with the ad creative itself.
+    </p>
+
+    <p>
+      <strong>Quality $Q$</strong> is a <em>demand-side</em> quantity. It captures how relevant
+      the ad is to the user, how persuasive the creative is, and whether the landing page
+      delivers on the promise. Improving $Q$ is about better targeting, creative optimization,
+      and audience understanding. It has nothing to do with the placement.
+    </p>
+
+    <p>
+      Conflating the two leads to poor decisions. An ad with high $Q$ on a low-$V$ placement
+      will show a low observed CTR &mdash; not because the ad is bad, but because nobody sees
+      it. Conversely, a mediocre ad on a premium above-the-fold spot ($V \approx 1$) will
+      expose its low $Q$ directly.
+    </p>
+
+    <p>
+      In the <a href="ad-viewability-decomposition.html">next post</a>, we decompose $V$
+      itself into structural (scroll depth, fold position) and attentional (saliency, creative
+      size) components.
+    </p>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <span class="footer-text">&copy; 2026 Williams Zanga</span>
+  </div>
+</footer>
+
+<script src="../js/main.js"></script>
+</body>
+</html>

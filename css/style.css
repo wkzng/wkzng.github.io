@@ -294,6 +294,32 @@ main {
   font-style: italic;
 }
 
+/* ─── Tables ──────────────────────────────────────────── */
+.article-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+.article-body th,
+.article-body td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.article-body th {
+  background: var(--bg-secondary);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.article-body tbody tr:nth-child(even) {
+  background: var(--bg-secondary);
+}
+
 /* ─── Figures & Media ─────────────────────────────────── */
 .article-body figure {
   margin: 1.5rem 0;

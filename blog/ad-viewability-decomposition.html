@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdTech 2: What Makes an Ad Viewable? &mdash; Williams Zanga</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a href="../index.html" class="site-name">Williams Zanga</a>
+    <nav>
+      <a href="../blog.html">Blog</a>
+      <a href="../publications.html">Publications</a>
+      <a href="../resume.html">Resume</a>
+      <a href="https://github.com/wkzng" target="_blank">GitHub</a>
+      <a href="mailto:zanga.williams@gmail.com">Email</a>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+        <span id="theme-icon">&#9790;</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <a href="../blog.html" class="article-back">&larr; back</a>
+
+  <div class="article-header">
+    <h1>AdTech 2: What Makes an Ad Viewable?</h1>
+    <p class="article-subtitle"><em>Decomposing viewability into structural and attentional factors</em></p>
+    <div class="article-meta">2026-02-17 &middot; Work in progress</div>
+  </div>
+
+  <div class="article-body">
+
+    <p>
+      In the <a href="ad-quality-viewability.html">previous post</a>, we derived
+      $P(\text{click} \mid \text{context}) = Q \cdot [V + r(1-V)]$, where
+      $V = P(\text{view} \mid \text{context})$ is the viewability score.
+      We treated $V$ as a single number. This post asks: <em>what determines $V$?</em>
+    </p>
+
+    <figure>
+      <img src="../assets/adtech2/viewability-threshold.webp" alt="Viewability correction factor for various values of r">
+      <figcaption>source:https://www.geoedge.com/ad-viewability-optimization/.</figcaption>
+    </figure>
+
+
+    <!-- ─────────────────────────────────────────── -->
+    <h2>1. Statistical Framework</h2>
+
+    <p>
+      An ad being <em>viewable</em> (meeting the
+      <a href="https://www.iab.com/wp-content/uploads/2015/06/MRC-Viewable-Ad-Impression-Measurement-Guideline.pdf" target="_blank">IAB/MRC standard</a>)
+      requires two things: the ad must enter the user&rsquo;s viewport, and the user must
+      actually notice it.
+      Let $s$ denote a specific ad spot/placement on a page. We marginalize over the latent event
+      &ldquo;in-viewport&rdquo;:
+    </p>
+
+    $$P(\text{view} \mid s) = P(\text{view} \mid \text{in-viewport}, s) \cdot P(\text{in-viewport} \mid s) + P(\text{view} \mid \neg\text{in-viewport}, s) \cdot P(\neg\text{in-viewport} \mid s)$$
+
+    <p>
+      If viewing requires the ad to be in viewport &mdash; you cannot register a viewable
+      impression of an ad that never appeared on screen &mdash; then
+      $P(\text{view} \mid \neg\text{in-viewport}, s) = 0$ and:
+    </p>
+
+    $$\boxed{P(\text{view} \mid s) = P(\text{view} \mid \text{in-viewport}, s) \cdot P(\text{in-viewport} \mid s)}$$
+
+    <p>
+      This gives us two distinct factors:
+    </p>
+
+    <ul>
+      <li>
+        $P(\text{in-viewport} \mid s)$ &mdash; the <strong>structural</strong> scroll/fold
+        probability. Does the user scroll far enough for the ad spot to enter the viewport?
+      </li>
+      <li>
+        $P(\text{view} \mid \text{in-viewport}, s)$ &mdash; the <strong>attentional
+        capture</strong>. Given the spot is on screen, does the ad grab the user&rsquo;s
+        attention?
+      </li>
+    </ul>
+
+    <p>
+      A saliency model estimates the latter, not the former. If scroll behaviour is not
+      accounted for, you will systematically overestimate $V$ for below-the-fold spots.
+    </p>
+
+        
+    <!-- <figure>
+      <img src="../assets/adtech2/looperman-1.png" alt="Viewability correction factor for various values of r">
+      <figcaption>Screen with typical competing ads (source: https://www.looperman.com).</figcaption>
+    </figure> -->
+
+    <figure>
+      <img src="../assets/adtech2/looperman-2.png" alt="Ad competition of ads in viewport">
+      <figcaption>Screen with multiple ads competing for attention in the viewport (source: https://www.looperman.com).</figcaption>
+    </figure>
+
+    <figure>
+      <img src="../assets/adtech2/looperman-3.png" alt="Low competition">
+      <figcaption>Single with p(in-viewport|s)=1  (source: https://www.looperman.com).</figcaption>
+    </figure>
+
+    
+    <!-- ─────────────────────────────────────────── -->
+    <h2>2. Empirical properties driving viewability</h2>
+
+    <p>
+      Before building a parametric model, it helps to identify the concrete factors that
+      influence viewability. Each maps onto one of the two terms in our decomposition:
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>Factor</th><th>Effect</th><th>Impacts</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Ad spot size</strong></td>
+          <td>Larger spots occupy more visual real estate, making them harder to ignore</td>
+          <td>$P(\text{view} \mid \text{in-viewport}, s)$ &uarr;</td>
+        </tr>
+        <tr>
+          <td><strong>Scroll depth required</strong></td>
+          <td>Spots further down the page are reached by fewer users</td>
+          <td>$P(\text{in-viewport} \mid s)$ &darr;</td>
+        </tr>
+        <tr>
+          <td><strong>Intrinsic eye-catchiness</strong></td>
+          <td>Contrast, motion, colour &mdash; how much the creative grabs attention</td>
+          <td>$P(\text{view} \mid \text{in-viewport}, s)$ &uarr;</td>
+        </tr>
+        <tr>
+          <td><strong>Page loading delay</strong></td>
+          <td>Slow-loading ads may never render before the user scrolls past</td>
+          <td>$P(\text{in-viewport} \mid s)$ &darr;</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      Some of these factors are <strong>structural</strong> (scroll depth, page speed) and
+      determined by the publisher&rsquo;s page layout and infrastructure. Others are
+      <strong>creative</strong> (size, eye-catchiness) and under the advertiser&rsquo;s control.
+    </p>
+
+    <p>
+      From an optimization standpoint, the actionable lever for the advertiser is the
+      attentional term $P(\text{view} \mid \text{in-viewport}, s)$. In a typical page,
+      an ad competes with other ads and editorial content for the user&rsquo;s attention.
+      The more attention-grabbing the creative, the higher the probability that the ad is
+      actually noticed once it enters the viewport. This is why creative design matters
+      for viewability &mdash; not just for persuasion.
+    </p>
+
+    
+    <figure>
+      <img src="../assets/adtech2/looperman-2-saliency.png" alt="Saliency for ad competition of ads in viewport">
+      <figcaption>Saliency as proxy to estimate p(view|in-viewport, s).</figcaption>
+    </figure>
+
+    <!-- ─────────────────────────────────────────── -->
+    <h2>3. Industry Benchmarks</h2>
+
+    <p>
+      To ground the discussion, here are viewability benchmarks from
+      <a href="https://www.pixalate.com/blog/q3-2025-emea-ad-viewability-benchmarks-report" target="_blank">Pixalate&rsquo;s Q3 2025 report</a>,
+      based on 39 billion global open programmatic impressions.
+    </p>
+
+    <h3>Global viewability by platform</h3>
+
+    <table>
+      <thead>
+        <tr><th>Region</th><th>Desktop Web</th><th>Mobile Web</th><th>Mobile App</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Global</td><td>63%</td><td>60%</td><td>67%</td></tr>
+        <tr><td>APAC</td><td>61%</td><td>60%</td><td>58%</td></tr>
+        <tr><td>EMEA</td><td>62%</td><td>62%</td><td>64%</td></tr>
+        <tr><td>LATAM</td><td>65%</td><td>61%</td><td>67%</td></tr>
+        <tr><td>North America</td><td>63%</td><td>60%</td><td>72%</td></tr>
+      </tbody>
+    </table>
+
+    <h3>EMEA viewability by country and platform</h3>
+
+    <table>
+      <thead>
+        <tr><th>Country</th><th>Desktop Web</th><th>Mobile Web</th><th>Mobile App</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>France</td><td>68%</td><td>49%</td><td>67%</td></tr>
+        <tr><td>Germany</td><td>63%</td><td>57%</td><td>65%</td></tr>
+        <tr><td>Israel</td><td>55%</td><td>64%</td><td>75%</td></tr>
+        <tr><td>Netherlands</td><td>71%</td><td>72%</td><td>52%</td></tr>
+        <tr><td>Ukraine</td><td>54%</td><td>54%</td><td>56%</td></tr>
+        <tr><td>United Kingdom</td><td>63%</td><td>66%</td><td>70%</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      A few observations: viewability hovers around 60&ndash;65% globally, meaning roughly
+      one in three displayed ads is never actually viewed. Mobile in-app tends to outperform
+      web in most markets (likely due to full-screen or interstitial formats). The variance
+      across countries is substantial &mdash; the Netherlands achieves 72% on mobile web while
+      France sits at 49% &mdash; reflecting differences in page layouts, ad density, and user
+      behaviour.
+    </p>
+
+    <hr>
+
+    <h2>Resources</h2>
+
+    <ul>
+      <li><a href="https://www.iab.com/wp-content/uploads/2015/06/MRC-Viewable-Ad-Impression-Measurement-Guideline.pdf" target="_blank">IAB/MRC Viewable Ad Impression Measurement Guideline</a> (PDF)</li>
+      <li><a href="https://advertising.amazon.com/en-ca/library/guides/viewability" target="_blank">Amazon Advertising &mdash; Guide to Viewability</a></li>
+      <li><a href="https://www.geoedge.com/ad-viewability-optimization/" target="_blank">GeoEdge &mdash; Ad Viewability Optimization</a></li>
+      <li><a href="https://www.optimizely.com/optimization-glossary/ad-viewability/" target="_blank">Optimizely &mdash; Ad Viewability</a></li>
+      <li><a href="https://www.pixalate.com/blog/q3-2025-emea-ad-viewability-benchmarks-report" target="_blank">Pixalate &mdash; Q3 2025 EMEA Ad Viewability Benchmarks Report</a></li>
+    </ul>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <span class="footer-text">&copy; 2026 Williams Zanga</span>
+  </div>
+</footer>
+
+<script src="../js/main.js"></script>
+</body>
+</html>

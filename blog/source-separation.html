@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rethinking Mask-Based Music Source Separation &mdash; Williams Zanga</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a href="../index.html" class="site-name">Williams Zanga</a>
+    <nav>
+      <a href="../blog.html">Blog</a>
+      <a href="../publications.html">Publications</a>
+      <a href="../resume.html">Resume</a>
+      <a href="https://github.com/wkzng" target="_blank">GitHub</a>
+      <a href="mailto:zanga.williams@gmail.com">Email</a>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+        <span id="theme-icon">&#9790;</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="container">
+
+  <a href="../blog.html" class="article-back">&larr; back</a>
+
+  <div class="article-header">
+    <h1>Rethinking Mask-Based Music Source Separation</h1>
+    <p class="article-subtitle"><em>From First-Order Masks to Conservative, Phase-Aware Decomposition</em></p>
+    <div class="article-meta">2026-02-12 &middot; Work in progress</div>
+  </div>
+
+  <div class="article-body">
+
+    <p>
+      Music source separation is often framed as a <strong>masking problem</strong>: given a
+      mixture spectrogram $X$, estimate a mask $M(X)$ such that the target source is
+    </p>
+
+    $$\hat{S} = M(X) \odot X$$
+
+    <p>
+      This framework is simple, stable, and easy to train &mdash; but it comes with well-known
+      limitations:
+    </p>
+
+    <ul>
+      <li><strong>Bleeding</strong>: residual interference from other sources.</li>
+      <li><strong>Under-separation</strong>: masks collapse to magnitude-only solutions.</li>
+      <li><strong>Phase blindness</strong>: imaginary components of the mask are often ignored.</li>
+      <li><strong>Lack of conservation</strong>: predicted sources do not sum back to the mixture.</li>
+    </ul>
+
+    <p>
+      This post explores a progressive framework: from ideal ratio masks (iRM) to complex
+      ideal ratio masks (cIRM), while enforcing mass conservation and making phase estimation
+      actually matter.
+    </p>
+
+    <!-- ─────────────────────────────────────────── -->
+    <h2>1. First-Order Model: the Ideal Ratio Mask (iRM)</h2>
+
+    <p>
+      The mixture signal in the STFT domain is a complex-valued matrix that we write in
+      polar form:
+    </p>
+
+    $$X = |X|\, e^{j\theta}$$
+
+    <p>
+      where $X \in \mathbb{C}^{F \times T}$, with $|X|$ the magnitude spectrogram and
+      $\theta$ the phase. The <strong>ideal ratio mask</strong> (iRM) estimates a
+      real-valued mask $M(X) \in \mathbb{R}^{F \times T}$ bounded in $[0, 1]$.
+      The separated source is:
+    </p>
+
+    $$\hat{S} = M(X) \odot X = M(X)\,|X|\, e^{j\theta}$$
+
+    <p>
+      In Cartesian coordinates, write the mixture as
+      $X_r = |X|\cos\theta$ and $X_i = |X|\sin\theta$. Then:
+    </p>
+
+    $$\hat{S}_r = M \cdot X_r, \qquad \hat{S}_i = M \cdot X_i$$
+
+    <p>
+      The same real scalar $M$ scales both real and imaginary parts identically.
+      This means the iRM <strong>preserves the phase of the mixture</strong>: the estimated
+      source inherits $\theta$ exactly. This provides a clean approximation of the source
+      magnitude, but occasionally produces audible artefacts because the true source phase
+      differs from the mixture phase.
+    </p>
+
+    <figure>
+      <img src="../assets/source-separation/iRM.jpeg" alt="Ideal ratio mask illustration">
+      <figcaption>Ideal ratio mask (iRM): a real-valued mask scales the mixture magnitude while preserving its phase.</figcaption>
+    </figure>
+
+    <h3>Bleeding under the iRM</h3>
+
+    <p>
+      Suppose the mixture is the sum of two sources: $X = S + S_{\text{other}}$.
+      We estimate $\hat{S} = M \odot X$ and set $\hat{S}_{\text{other}} = (1 - M) \odot X$.
+      Expanding in terms of the true sources:
+    </p>
+
+    $$\hat{S} = M \cdot S + M \cdot S_{\text{other}}$$
+    $$\hat{S}_{\text{other}} = (1-M) \cdot S + (1-M) \cdot S_{\text{other}}$$
+
+    <p>
+      In matrix form:
+    </p>
+
+    $$\begin{pmatrix} \hat{S} \\ \hat{S}_{\text{other}} \end{pmatrix}
+    = \underbrace{\begin{pmatrix} M & M \\ 1-M & 1-M \end{pmatrix}}_{\mathbf{A}}
+    \begin{pmatrix} S \\ S_{\text{other}} \end{pmatrix}$$
+
+    <p>
+      Perfect separation would require $\mathbf{A} = \mathbf{I}$, i.e. a diagonal matrix.
+      But the two columns of $\mathbf{A}$ are always identical &mdash; both equal
+      $(M,\; 1-M)^{\!\top}$. The matrix is <strong>rank&nbsp;1</strong> regardless of $M$, so
+      it can never be the identity. Structurally, bleeding is impossible to eliminate:
+      every time-frequency bin that belongs to $S_{\text{other}}$ is attenuated by the same
+      factor $M$ that is applied to $S$.
+    </p>
+
+    <!-- ─────────────────────────────────────────── -->
+    <h2>2. Complex Ideal Ratio Mask (cIRM)</h2>
+
+    <p>
+      Instead of a real scalar per time-frequency bin, we predict a <strong>complex mask</strong>
+      in polar form:
+    </p>
+
+    $$M = |M|\, e^{j\phi}$$
+
+    <p>
+      Applying it to the mixture:
+    </p>
+
+    $$\hat{S} = M \odot X = |M|\,e^{j\phi} \cdot |X|\,e^{j\theta} = |M|\,|X|\; e^{j(\phi + \theta)}$$
+
+    <p>
+      The cIRM can now <strong>rotate the phase</strong> of each time-frequency bin by $\phi$,
+      in addition to scaling the magnitude by $|M|$. In Cartesian form, with
+      $\Re(M) = |M|\cos\phi$ and $\Im(M) = |M|\sin\phi$:
+    </p>
+
+    $$\hat{S}_r = \Re(M)\, X_r - \Im(M)\, X_i$$
+    $$\hat{S}_i = \Re(M)\, X_i + \Im(M)\, X_r$$
+
+    <p>
+      Unlike the iRM, the real and imaginary parts of the output are now <em>coupled</em>
+      through $\Im(M)$. This is strictly more expressive.
+    </p>
+
+    <figure>
+      <img src="../assets/source-separation/cIRM.jpeg" alt="Complex ideal ratio mask illustration">
+      <figcaption>Complex ideal ratio mask (cIRM): a complex-valued mask can both scale the magnitude and rotate the phase of each TF bin.</figcaption>
+    </figure>
+
+    <h3>Bleeding under the cIRM</h3>
+
+    <p>
+      With a complex mask, $\hat{S} = M \odot X$ and $\hat{S}_{\text{other}} = (1 - M) \odot X$.
+      The same expansion gives:
+    </p>
+
+    $$\begin{pmatrix} \hat{S} \\ \hat{S}_{\text{other}} \end{pmatrix}
+    = \begin{pmatrix} M & M \\ 1-M & 1-M \end{pmatrix}
+    \begin{pmatrix} S \\ S_{\text{other}} \end{pmatrix}$$
+
+    <p>
+      The matrix has the exact same rank-1 structure as in the iRM case &mdash; both columns
+      are identical. Even though $M$ is now complex-valued, the fundamental limitation
+      persists: the mask applies a <strong>single operator per bin to the mixture</strong>,
+      so it cannot distinguish the individual contributions of $S$ and $S_{\text{other}}$
+      within $X$. The cIRM improves phase estimation but does not solve the bleeding problem.
+    </p>
+
+    <h3>The phase collapse problem</h3>
+
+    <p>
+      Without additional constraints, the model learns:
+    </p>
+
+    $$\Im(M) \approx 0$$
+
+    <p>
+      Because magnitude-only masking already minimizes most losses, the imaginary part becomes
+      <strong>wasted capacity</strong> unless we actively force it to matter. Phase must be
+      <em>structurally necessary</em> in the architecture &mdash; if it is optional, the network
+      will ignore it.
+    </p>
+
+    <!-- ─────────────────────────────────────────── -->
+    <h2>3. Mass Conservation</h2>
+
+    <p>
+      Let us define two sources that sum to the mixture:
+    </p>
+
+    $$S_1 + S_2 = X$$
+
+    <p>
+      In mask-based systems, we usually predict only $S_1$:
+    </p>
+
+    $$\hat{S}_1 = M \odot X$$
+
+    <p>
+      The complementary source is implicitly:
+    </p>
+
+    $$\hat{S}_2 = (1 - M) \odot X$$
+
+    <p>
+      This introduces two structural problems: <strong>bleeding</strong> (interference leaks
+      into both sources when $M$ is imperfect) and <strong>non-conservation</strong> (there is
+      no explicit constraint that $\hat{S}_1 + \hat{S}_2 = X$). In practice, errors accumulate,
+      especially when multiple post-processing stages are stacked.
+    </p>
+
+    <h3>Conservative separation by construction</h3>
+
+    <p>
+      A cleaner design explicitly decomposes the mixture. In the <strong>shared-phase</strong>
+      (classical soft masking) case, assume $\phi_1 = \phi_2 = \phi$. Then:
+    </p>
+
+    $$A_1 + A_2 = A$$
+
+    <p>
+      We can parameterize via softmax:
+    </p>
+
+    $$A_1, A_2 = \text{softmax}(\text{logits}) \cdot A$$
+
+    <p>
+      This is clean, conservative, and stable &mdash; but phase separation is impossible.
+    </p>
+
+    <h3>Phase offsets</h3>
+
+    <p>
+      To recover phase, let $\phi_1 = \phi + \theta_1$ and $\phi_2 = \phi + \theta_2$. Then:
+    </p>
+
+    $$A_1\, e^{j\theta_1} + A_2\, e^{j\theta_2} = A$$
+
+    <p>
+      which decomposes into the system:
+    </p>
+
+    $$A_1 \cos\theta_1 + A_2 \cos\theta_2 = A$$
+    $$A_1 \sin\theta_1 + A_2 \sin\theta_2 = 0$$
+
+    <p>
+      This formulation allows <strong>phase steering</strong>, enables destructive interference
+      modelling, and provides a path toward true complex separation rather than magnitude
+      masking. Separation becomes <strong>vector decomposition</strong> in the complex plane,
+      not just amplitude routing.
+    </p>
+
+    <!-- ─────────────────────────────────────────── -->
+    <h2>4. Addressing Bleeding with Gated Correction</h2>
+
+    <p>
+      To go beyond first-order masking while preserving stability, we introduce a
+      <strong>corrective residual</strong>:
+    </p>
+
+    $$\hat{S} = M(X) \odot X \;+\; g(M) \odot R\!\bigl(M \odot X,\; X\bigr) \odot X$$
+
+    <p>
+      where $R(\cdot)$ is a learnable correction network and $g(M)$ is a gate that activates
+      corrections only when masks are uncertain. A simple and effective gate:
+    </p>
+
+    $$g(M) = 4\,|M|\,(1 - |M|)$$
+
+    <p>
+      This gate has useful properties:
+    </p>
+
+    <ul>
+      <li>$g(M) = 0$ when $|M| \in \{0,\, 1\}$ &mdash; the mask is confident.</li>
+      <li>$g(M)$ peaks at $|M| = 0.5$ &mdash; maximum ambiguity.</li>
+      <li>Corrections are <strong>localized to uncertain time&ndash;frequency bins</strong>.</li>
+    </ul>
+
+    <p>
+      The interpretation is clean: the mask does the coarse separation; the residual only
+      refines where the mask is unsure. This can also be iterated:
+    </p>
+
+    $$\hat{S}^{(k+1)} = \hat{S}^{(k)} + g(M) \odot R_k\!\bigl(\hat{S}^{(k)},\; X\bigr)$$
+
+    <!-- ─────────────────────────────────────────── -->
+    <h2>5. Training Losses</h2>
+
+    <p>
+      Two complementary losses are useful:
+    </p>
+
+    <h3>Spectrogram topology loss (scale-invariant)</h3>
+
+    $$\mathcal{L}_{\text{spec}}(\hat{S}, S) = \bigl\|\, \alpha\,\hat{S} - S \,\bigr\|_1, \qquad \alpha = \frac{\langle \hat{S},\, S \rangle}{\|\hat{S}\|^2}$$
+
+    <p>
+      This focuses on <strong>shape alignment</strong> in the time&ndash;frequency domain.
+    </p>
+
+    <h3>Waveform loss</h3>
+
+    $$\mathcal{L}_{\text{wave}}(\hat{s}, s) = \bigl\|\, \alpha\,\hat{s} - s \,\bigr\|_1$$
+
+    <p>
+      This enforces <strong>time-domain perceptual fidelity</strong>. Scale-invariant losses
+      often reduce pressure on phase learning. Switching to plain $L_1$ or combining both can
+      reintroduce useful gradients for the imaginary mask components.
+    </p>
+
+    <!-- ─────────────────────────────────────────── -->
+    <h2>6. Why Directly Predicting $S$ Often Fails</h2>
+
+    <p>
+      Empirically, $\hat{S} = f(X)$ is much harder to train than
+      $\hat{S} = M(X) \odot X$. Masking provides an <strong>inductive bias</strong>: the
+      solution lives near the mixture, and the network only needs to decide <em>how much</em>
+      of each time-frequency bin belongs to the target. Direct estimation requires learning
+      absolute phase and amplitude from scratch &mdash; ill-conditioned and unstable.
+      Second-order corrections give a compromise: mask first, then learn to deviate from it.
+    </p>
+
+    <!-- ─────────────────────────────────────────── -->
+    <h2>7. Design Principles</h2>
+
+    <ol>
+      <li><strong>Conservation first</strong> &mdash; $\sum_i \hat{S}_i = X$</li>
+      <li><strong>Mask for structure, residual for precision</strong></li>
+      <li><strong>Phase must be structurally necessary</strong> &mdash; if phase is optional, the network will ignore it.</li>
+      <li><strong>Uncertainty-gated refinement</strong> &mdash; let corrections act only where masks are ambiguous.</li>
+      <li><strong>Think vector decomposition, not just masking</strong> &mdash; source separation is geometry in the complex plane.</li>
+    </ol>
+
+    <!-- ─────────────────────────────────────────── -->
+    <h2>Open Questions</h2>
+
+    <ul>
+      <li>How to force non-zero imaginary masks without destabilizing training?</li>
+      <li>Should phase offsets $\theta_i$ be bounded or unconstrained?</li>
+      <li>Can multi-step gated correction be iterated end-to-end?</li>
+      <li>Can conservation constraints be hard-coded at every correction stage?</li>
+    </ul>
+
+    <hr>
+
+    <p>
+      Masking is not wrong &mdash; it is a first-order approximation to a deeper geometric
+      problem: decomposing complex vectors under conservation constraints. By making correction,
+      uncertainty, and phase explicit parts of the architecture, we move closer to models that
+      separate not just energy, but <strong>structure</strong>.
+    </p>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <span class="footer-text">&copy; 2026 Williams Zanga</span>
+  </div>
+</footer>
+
+<script src="../js/main.js"></script>
+</body>
+</html>
